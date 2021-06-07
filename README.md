@@ -78,7 +78,7 @@ func main() {
 		return "fuxiao", 10 * time.Second, nil
 	})
 	if err := rst1.Err(); err != nil && err != cache.Nil {
-		log.Fatalf("Failed to retrieve cache")
+		log.Fatalf("Failed to retrieve cache: %v", err.Error())
 	}
 	
 	fmt.Println(rst1.Val())
