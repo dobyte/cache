@@ -109,9 +109,9 @@ func main() {
     {
         rst3 := c.GetSet("fuxiao", func() (interface{}, time.Duration, error) {
             return &student{
-            Name:     "fuxiao",
-            Age:      30,
-            Birthday: "1991-03-11",
+                Name:     "fuxiao",
+                Age:      30,
+                Birthday: "1991-03-11",
             }, 1 * time.Hour, nil
         })
 
