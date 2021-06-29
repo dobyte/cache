@@ -1,0 +1,16 @@
+version: '3.8'
+
+networks:
+  dev:
+    driver: redis-cluster-network
+
+services:
+  redis-cluster:
+    image: grokzen/redis-cluster
+    container_name: redis-cluster
+    environment:
+      - IP=0.0.0.0
+      - STANDALONE=true
+      - SENTINEL=true
+    ports:
+      - 7000-7005:7000-7005

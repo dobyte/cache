@@ -14,11 +14,11 @@ import (
 
 type RedisLock struct {
 	BaseLock
-	client *Redis
+	client Redis
 }
 
-// Create a redis lock instance.
-func NewRedisLock(client *Redis, name string, time time.Duration) Lock {
+// NewRedisLock Create a redis lock instance.
+func NewRedisLock(client Redis, name string, time time.Duration) Lock {
 	return &RedisLock{
 		BaseLock: BaseLock{
 			name: name,
@@ -28,12 +28,12 @@ func NewRedisLock(client *Redis, name string, time time.Duration) Lock {
 	}
 }
 
-// Attempt to acquire the lock.
+// Acquire Attempt to acquire the lock.
 func (l *RedisLock) Acquire() (bool, error) {
 	return l.client.SetNX(context.Background(), l.name, 1, l.time).Result()
 }
 
-// Release the lock.
+// Release Release the lock.
 func (l *RedisLock) Release() error {
 	return l.client.Del(context.Background(), l.name).Err()
 }

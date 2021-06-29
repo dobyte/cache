@@ -10,9 +10,9 @@ package cache
 import "time"
 
 type Lock interface {
-	// Attempt to acquire the lock.
+	// Acquire Attempt to acquire the lock.
 	Acquire() (bool, error)
-	// Release the lock.
+	// Release Release the lock.
 	Release() error
 }
 

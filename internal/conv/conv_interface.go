@@ -8,9 +8,9 @@
 package conv
 
 type stringInterface interface {
-	String() string
+    String() string
 }
 
 type errorInterface interface {
-	Error() string
+    Error() string
 }

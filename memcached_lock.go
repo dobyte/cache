@@ -18,7 +18,7 @@ type MemcachedLock struct {
 	client *Memcached
 }
 
-// Create a memcached lock instance.
+// NewMemcachedLock Create a memcached lock instance.
 func NewMemcachedLock(client *Memcached, name string, time time.Duration) Lock {
 	return &MemcachedLock{
 		BaseLock: BaseLock{
@@ -29,7 +29,7 @@ func NewMemcachedLock(client *Memcached, name string, time time.Duration) Lock {
 	}
 }
 
-// Attempt to acquire the lock.
+// Acquire Attempt to acquire the lock.
 func (l *MemcachedLock) Acquire() (bool, error) {
 	if err := l.client.Add(&memcache.Item{
 		Key:        l.name,
@@ -46,7 +46,7 @@ func (l *MemcachedLock) Acquire() (bool, error) {
 	}
 }
 
-// Release the lock.
+// Release Release the lock.
 func (l *MemcachedLock) Release() error {
 	if err := l.client.Delete(l.name); err != nil && err != memcache.ErrCacheMiss {
 		return err
