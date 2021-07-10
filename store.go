@@ -62,10 +62,16 @@ type Store interface {
 	Forget(key string) error
 	// ForgetMany Remove multiple items from the cache.
 	ForgetMany(keys ...string) (int64, error)
+	// Expire Set expiration time for a key.
+	Expire(key string, expire time.Duration) (bool, error)
+	// ExpireMany Set expiration time for multiple key.
+	ExpireMany(values map[string]time.Duration) (map[string]bool, error)
 	// Flush Remove all items from the cache.
 	Flush() error
 	// Lock Get a lock instance.
 	Lock(name string, time time.Duration) Lock
+	// PrefixKey Add prefix to the front of key.
+	PrefixKey(key string) string
 	// GetClient Get a client instance.
 	GetClient() interface{}
 }
@@ -114,8 +120,8 @@ func (s *BaseStore) SetDefaultNilExpire(expire time.Duration) {
 	}
 }
 
-// Add prefix to the front of key.
-func (s *BaseStore) prefixKey(key string) string {
+// PrefixKey Add prefix to the front of key.
+func (s *BaseStore) PrefixKey(key string) string {
 	if s.prefix == "" {
 		return key
 	} else {
