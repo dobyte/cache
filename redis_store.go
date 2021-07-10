@@ -36,7 +36,7 @@ type (
 		DB               int
 		Prefix           string
 		DefaultNilValue  string
-		DefaultNilExpire time.Duration
+		DefaultNilExpire int64
 	}
 )
 

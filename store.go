@@ -112,11 +112,11 @@ func (s *BaseStore) GetDefaultNilExpire() time.Duration {
 }
 
 // SetDefaultNilExpire Set the cache default empty value expire.
-func (s *BaseStore) SetDefaultNilExpire(expire time.Duration) {
+func (s *BaseStore) SetDefaultNilExpire(expire int64) {
 	if expire <= 0 {
 		s.defaultNilExpire = defaultNilExpire
 	} else {
-		s.defaultNilExpire = expire
+		s.defaultNilExpire = time.Duration(expire) * time.Second
 	}
 }
 

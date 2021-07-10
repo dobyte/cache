@@ -73,7 +73,7 @@ type (
 		Driver           string
 		Prefix           string
 		DefaultNilValue  string
-		DefaultNilExpire time.Duration
+		DefaultNilExpire int64
 		Stores           Stores
 	}
 	

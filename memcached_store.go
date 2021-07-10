@@ -25,7 +25,7 @@ type (
 		Addrs            []string
 		Prefix           string
 		DefaultNilValue  string
-		DefaultNilExpire time.Duration
+		DefaultNilExpire int64
 	}
 )
 
