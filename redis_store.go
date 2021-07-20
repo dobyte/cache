@@ -16,20 +16,14 @@ import (
 	"github.com/dobyte/cache/internal/conv"
 )
 
-const (
-	RedisNodeMode    = "node"
-	RedisClusterMode = "cluster"
-)
-
 type (
-	Redis      = redis.Cmdable
+	Redis      = redis.UniversalClient
 	RedisStore struct {
 		BaseStore
 		client Redis
 	}
 	
 	RedisOptions struct {
-		Mode             string
 		Addrs            []string
 		Username         string
 		Password         string
@@ -42,24 +36,12 @@ type (
 
 // NewRedisStore Create a redis store instance.
 func NewRedisStore(opt *RedisOptions) Store {
-	var client redis.Cmdable
-	
-	if opt.Mode == RedisClusterMode {
-		client = redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:    opt.Addrs,
-			Username: opt.Username,
-			Password: opt.Password,
-		})
-	} else {
-		client = redis.NewClient(&redis.Options{
-			Addr:     opt.Addrs[0],
-			Username: opt.Username,
-			Password: opt.Password,
-			DB:       opt.DB,
-		})
-	}
-	
-	c := &RedisStore{client: client}
+	c := &RedisStore{client: redis.NewUniversalClient(&redis.UniversalOptions{
+		Addrs:    opt.Addrs,
+		Username: opt.Username,
+		Password: opt.Password,
+		DB:       opt.DB,
+	})}
 	c.SetPrefix(opt.Prefix)
 	c.SetDefaultNilValue(opt.DefaultNilValue)
 	c.SetDefaultNilExpire(opt.DefaultNilExpire)

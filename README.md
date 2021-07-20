@@ -69,7 +69,6 @@ func main() {
         Prefix: "cache",
         Stores: cache.Stores{
             Redis: &cache.RedisOptions{
-                Mode:  cache.RedisClusterMode,
                 Addrs: []string{"127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"},
             },
         },
