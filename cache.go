@@ -100,7 +100,6 @@ func NewCache(opt *Options) Cache {
 // Create a redis store instance.
 func newRedisStore(opt *Options) Store {
 	option := &RedisOptions{
-		Mode:             opt.Stores.Redis.Mode,
 		Addrs:            opt.Stores.Redis.Addrs,
 		Username:         opt.Stores.Redis.Username,
 		Password:         opt.Stores.Redis.Password,
