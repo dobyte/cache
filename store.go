@@ -8,9 +8,10 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"time"
-	
+
 	"github.com/dobyte/cache/internal/sync"
 )
 
@@ -31,43 +32,43 @@ type (
 
 type Store interface {
 	// Has Determine if an item exists in the cache.
-	Has(key string) (bool, error)
+	Has(ctx context.Context, key string) (bool, error)
 	// HasMany Determine if multiple item exists in the cache.
-	HasMany(keys ...string) (map[string]bool, error)
+	HasMany(ctx context.Context, keys ...string) (map[string]bool, error)
 	// Get Retrieve an item from the cache by key.
-	Get(key string, defaultValue ...interface{}) Result
+	Get(ctx context.Context, key string, defaultValue ...interface{}) Result
 	// GetMany Retrieve multiple items from the cache by key.
-	GetMany(keys ...string) (map[string]string, error)
+	GetMany(ctx context.Context, keys ...string) (map[string]Result, error)
 	// GetSet Retrieve or set an item from the cache by key.
-	GetSet(key string, fn defaultValueFunc) Result
+	GetSet(ctx context.Context, key string, fn defaultValueFunc) Result
 	// Set Store an item in the cache.
-	Set(key string, value interface{}, expire time.Duration) error
+	Set(ctx context.Context, key string, value interface{}, expire time.Duration) error
 	// SetMany Store multiple items in the cache for a given number of expire.
-	SetMany(values map[string]interface{}, expire time.Duration) error
+	SetMany(ctx context.Context, values map[string]interface{}, expire time.Duration) error
 	// Forever Store an item in the cache indefinitely.
-	Forever(key string, value interface{}) error
+	Forever(ctx context.Context, key string, value interface{}) error
 	// ForeverMany Store multiple items in the cache indefinitely.
-	ForeverMany(values map[string]interface{}) error
+	ForeverMany(ctx context.Context, values map[string]interface{}) error
 	// Add Store an item in the cache if the key does not exist.
-	Add(key string, value interface{}, expire time.Duration) (bool, error)
+	Add(ctx context.Context, key string, value interface{}, expire time.Duration) (bool, error)
 	// Increment Increment the value of an item in the cache.
-	Increment(key string, value int64) (int64, error)
+	Increment(ctx context.Context, key string, value int64) (int64, error)
 	// IncrementMany Increment the value of multiple items in the cache.
-	IncrementMany(values map[string]int64) (map[string]int64, error)
+	IncrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error)
 	// Decrement Decrement the value of an item in the cache.
-	Decrement(key string, value int64) (int64, error)
+	Decrement(ctx context.Context, key string, value int64) (int64, error)
 	// DecrementMany Decrement the value of multiple items in the cache.
-	DecrementMany(values map[string]int64) (map[string]int64, error)
+	DecrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error)
 	// Forget Remove an item from the cache.
-	Forget(key string) error
+	Forget(ctx context.Context, key string) error
 	// ForgetMany Remove multiple items from the cache.
-	ForgetMany(keys ...string) (int64, error)
+	ForgetMany(ctx context.Context, keys ...string) (int64, error)
 	// Expire Set expiration time for a key.
-	Expire(key string, expire time.Duration) (bool, error)
+	Expire(ctx context.Context, key string, expire time.Duration) (bool, error)
 	// ExpireMany Set expiration time for multiple key.
-	ExpireMany(values map[string]time.Duration) (map[string]bool, error)
+	ExpireMany(ctx context.Context, values map[string]time.Duration) (map[string]bool, error)
 	// Flush Remove all items from the cache.
-	Flush() error
+	Flush(ctx context.Context) error
 	// Lock Get a lock instance.
 	Lock(name string, time time.Duration) Lock
 	// PrefixKey Add prefix to the front of key.

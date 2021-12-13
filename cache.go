@@ -8,18 +8,19 @@
 package cache
 
 import (
+	"context"
 	"time"
 )
 
 type Cache interface {
 	// Has Determine if an item exists in the cache.
-	Has(key string) (bool, error)
+	Has(ctx context.Context, key string) (bool, error)
 	// HasMany Determine if multiple item exists in the cache.
-	HasMany(keys ...string) (map[string]bool, error)
+	HasMany(ctx context.Context, keys ...string) (map[string]bool, error)
 	// Get Retrieve an item from the cache by key.
 	Get(key string, defaultValue ...interface{}) Result
 	// GetMany Retrieve multiple items from the cache by key.
-	GetMany(keys ...string) (map[string]string, error)
+	GetMany(ctx context.Context, keys ...string) (map[string]Result, error)
 	// GetSet Retrieve or set an item from the cache by key.
 	GetSet(key string, fn func() (interface{}, time.Duration, error)) Result
 	// Set Store an item in the cache.
@@ -68,7 +69,7 @@ type (
 		Redis     *RedisOptions
 		Memcached *MemcachedOptions
 	}
-	
+
 	Options struct {
 		Driver           string
 		Prefix           string
@@ -76,7 +77,7 @@ type (
 		DefaultNilExpire int64
 		Stores           Stores
 	}
-	
+
 	cache struct {
 		store Store
 	}
@@ -84,14 +85,14 @@ type (
 
 func NewCache(opt *Options) Cache {
 	var store Store
-	
+
 	switch opt.Driver {
 	case RedisDriver:
 		store = newRedisStore(opt)
 	case MemcachedDriver:
 		store = newMemcachedStore(opt)
 	}
-	
+
 	return &cache{
 		store: store,
 	}
@@ -108,19 +109,19 @@ func newRedisStore(opt *Options) Store {
 		DefaultNilValue:  opt.DefaultNilValue,
 		DefaultNilExpire: opt.DefaultNilExpire,
 	}
-	
+
 	if opt.Stores.Redis.Prefix != "" {
 		option.Prefix = opt.Stores.Redis.Prefix
 	}
-	
+
 	if opt.Stores.Redis.DefaultNilValue != "" {
 		option.DefaultNilValue = opt.Stores.Redis.DefaultNilValue
 	}
-	
+
 	if opt.Stores.Redis.DefaultNilExpire != 0 {
 		option.DefaultNilExpire = opt.Stores.Redis.DefaultNilExpire
 	}
-	
+
 	return NewRedisStore(option)
 }
 
@@ -132,40 +133,48 @@ func newMemcachedStore(opt *Options) Store {
 		DefaultNilValue:  opt.DefaultNilValue,
 		DefaultNilExpire: opt.DefaultNilExpire,
 	}
-	
+
 	if opt.Stores.Memcached.Prefix != "" {
 		option.Prefix = opt.Stores.Memcached.Prefix
 	}
-	
+
 	if opt.Stores.Memcached.DefaultNilValue != "" {
 		option.DefaultNilValue = opt.Stores.Memcached.DefaultNilValue
 	}
-	
+
 	if opt.Stores.Memcached.DefaultNilExpire != 0 {
 		option.DefaultNilExpire = opt.Stores.Memcached.DefaultNilExpire
 	}
-	
+
 	return NewMemcachedStore(option)
 }
 
 // Has Determine if an item exists in the cache.
-func (c *cache) Has(key string) (bool, error) {
-	return c.store.Has(key)
+func (c *cache) Has(ctx context.Context, key string) (bool, error) {
+	val, err := storeSharedCallGroup.Call(key, func() (interface{}, error) {
+		return c.store.Has(ctx, key)
+	})
+
+	return val.(bool), err
 }
 
 // HasMany Determine if multiple item exists in the cache.
-func (c *cache) HasMany(keys ...string) (map[string]bool, error) {
-	return c.store.HasMany(keys...)
+func (c *cache) HasMany(ctx context.Context, keys ...string) (map[string]bool, error) {
+	return c.store.HasMany(ctx, keys...)
 }
 
 // Get Retrieve an item from the cache by key.
 func (c *cache) Get(key string, defaultValue ...interface{}) Result {
-	return c.store.Get(key, defaultValue...)
+	rst, _ := storeSharedCallGroup.Call(key, func() (interface{}, error) {
+		return c.store.Get(context.Background(), key, defaultValue...), nil
+	})
+
+	return rst.(Result)
 }
 
 // GetMany Retrieve multiple items from the cache by key.
-func (c *cache) GetMany(keys ...string) (map[string]string, error) {
-	return c.store.GetMany(keys...)
+func (c *cache) GetMany(ctx context.Context, keys ...string) (map[string]Result, error) {
+	return c.store.GetMany(ctx, keys...)
 }
 
 // GetSet Retrieve or set an item from the cache by key.
