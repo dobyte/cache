@@ -10,8 +10,10 @@ package cache_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/dobyte/cache"
+	"github.com/dobyte/cache/internal/safe"
 )
 
 func newRedisCache() cache.Cache {
@@ -20,7 +22,7 @@ func newRedisCache() cache.Cache {
 		Prefix: "cache",
 		Stores: cache.Stores{
 			Redis: &cache.RedisOptions{
-				Addrs: []string{"127.0.0.1:6379"},
+				Addrs: []string{":7000", ":7001", ":7002", ":7003", ":7004", ":7005"},
 			},
 		},
 	})
@@ -36,6 +38,37 @@ func newMemcachedCache() cache.Cache {
 			},
 		},
 	})
+}
+
+func TestCache_Lock(t *testing.T) {
+	redis := newRedisCache()
+
+	locker := redis.Lock(context.TODO(), "locker", 10*time.Second)
+
+	var (
+		ok  bool
+		err error
+	)
+
+	if ok, err = locker.Acquire(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(ok)
+
+	time.Sleep(2 * time.Second)
+
+	if ok, err = locker.Acquire(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(ok)
+
+	safe.Go(func() {
+		panic("aaa")
+	})
+
+	t.Log("over")
 }
 
 // func TestCache_Has(t *testing.T) {
@@ -112,6 +145,23 @@ func TestCache_HasMany(t *testing.T) {
 	redis := newRedisCache()
 
 	ret, err := redis.HasMany(context.Background(), "a", "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for k, v := range ret {
+		t.Log(k)
+		t.Log(v)
+	}
+}
+
+func TestCache_IncrementMany(t *testing.T) {
+	redis := newRedisCache()
+
+	ret, err := redis.IncrementMany(context.Background(), map[string]int64{
+		"aaa": 1,
+		"bbb": 2,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -135,7 +135,7 @@ func (c *MemcachedStore) GetMany(ctx context.Context, keys ...string) (map[strin
 }
 
 // GetSet Retrieve or set an item from the cache by key.
-func (c *MemcachedStore) GetSet(key string, fn defaultValueFunc) Result {
+func (c *MemcachedStore) GetSet(ctx context.Context, key string, fn defaultValueFunc) Result {
 	if item, err := c.client.Get(c.PrefixKey(key)); err != nil {
 		if err != memcache.ErrCacheMiss {
 			return NewResult("", err)
@@ -150,14 +150,14 @@ func (c *MemcachedStore) GetSet(key string, fn defaultValueFunc) Result {
 			case nil:
 				ret := ret.(defaultValueRet)
 				val := conv.String(ret.val)
-				return NewResult(val, nil, c.Set(key, val, ret.expire))
+				return NewResult(val, nil, c.Set(ctx, key, val, ret.expire))
 			case Nil:
 				ret := ret.(defaultValueRet)
 				expire := c.GetDefaultNilExpire()
 				if ret.expire > 0 {
 					expire = ret.expire
 				}
-				return NewResult("", Nil, c.Set(key, c.GetDefaultNilValue(), expire))
+				return NewResult("", Nil, c.Set(ctx, key, c.GetDefaultNilValue(), expire))
 			default:
 				return NewResult("", err)
 			}
@@ -172,7 +172,7 @@ func (c *MemcachedStore) GetSet(key string, fn defaultValueFunc) Result {
 }
 
 // Set Store an item in the cache.
-func (c *MemcachedStore) Set(key string, value interface{}, expire time.Duration) error {
+func (c *MemcachedStore) Set(ctx context.Context, key string, value interface{}, expire time.Duration) error {
 	return c.client.Set(&memcache.Item{
 		Key:        c.PrefixKey(key),
 		Value:      []byte(conv.String(value)),
@@ -181,9 +181,9 @@ func (c *MemcachedStore) Set(key string, value interface{}, expire time.Duration
 }
 
 // SetMany Store multiple items in the cache for a given number of expire,Non-atomic operation
-func (c *MemcachedStore) SetMany(values map[string]interface{}, expire time.Duration) error {
+func (c *MemcachedStore) SetMany(ctx context.Context, values map[string]interface{}, expire time.Duration) error {
 	for key, value := range values {
-		if err := c.Set(key, value, expire); err != nil {
+		if err := c.Set(ctx, key, value, expire); err != nil {
 			return err
 		}
 	}
@@ -192,17 +192,17 @@ func (c *MemcachedStore) SetMany(values map[string]interface{}, expire time.Dura
 }
 
 // Forever Store an item in the cache indefinitely.
-func (c *MemcachedStore) Forever(key string, value interface{}) error {
-	return c.Set(key, value, 0)
+func (c *MemcachedStore) Forever(ctx context.Context, key string, value interface{}) error {
+	return c.Set(ctx, key, value, 0)
 }
 
 // ForeverMany Store multiple items in the cache indefinitely.
-func (c *MemcachedStore) ForeverMany(values map[string]interface{}) error {
-	return c.SetMany(values, 0)
+func (c *MemcachedStore) ForeverMany(ctx context.Context, values map[string]interface{}) error {
+	return c.SetMany(ctx, values, 0)
 }
 
 // Add Store an item in the cache if the key does not exist.
-func (c *MemcachedStore) Add(key string, value interface{}, expire time.Duration) (bool, error) {
+func (c *MemcachedStore) Add(ctx context.Context, key string, value interface{}, expire time.Duration) (bool, error) {
 	if err := c.client.Add(&memcache.Item{
 		Key:        c.PrefixKey(key),
 		Value:      []byte(conv.String(value)),
@@ -219,15 +219,15 @@ func (c *MemcachedStore) Add(key string, value interface{}, expire time.Duration
 }
 
 // Increment Increment the value of an item in the cache.
-func (c *MemcachedStore) Increment(key string, value int64) (int64, error) {
+func (c *MemcachedStore) Increment(ctx context.Context, key string, value int64) (int64, error) {
 	if value < 0 {
-		return c.Decrement(key, 0-value)
+		return c.Decrement(ctx, key, 0-value)
 	}
 
 	newValue, err := c.client.Increment(c.PrefixKey(key), uint64(value))
 	if err != nil {
 		if err == memcache.ErrCacheMiss {
-			if _, err = c.Add(key, value, 0); err != nil {
+			if _, err = c.Add(ctx, key, value, 0); err != nil {
 				return 0, err
 			}
 
@@ -241,11 +241,11 @@ func (c *MemcachedStore) Increment(key string, value int64) (int64, error) {
 }
 
 // IncrementMany Increment the value of multiple items in the cache,Non-atomic operation
-func (c *MemcachedStore) IncrementMany(values map[string]int64) (map[string]int64, error) {
+func (c *MemcachedStore) IncrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error) {
 	var ret = make(map[string]int64)
 
 	for key, value := range values {
-		if newValue, err := c.Increment(key, value); err != nil {
+		if newValue, err := c.Increment(ctx, key, value); err != nil {
 			return ret, err
 		} else {
 			ret[key] = newValue
@@ -256,15 +256,15 @@ func (c *MemcachedStore) IncrementMany(values map[string]int64) (map[string]int6
 }
 
 // Decrement Decrement the value of an item in the cache.
-func (c *MemcachedStore) Decrement(key string, value int64) (int64, error) {
+func (c *MemcachedStore) Decrement(ctx context.Context, key string, value int64) (int64, error) {
 	if value < 0 {
-		return c.Increment(key, 0-value)
+		return c.Increment(ctx, key, 0-value)
 	}
 
 	newValue, err := c.client.Decrement(c.PrefixKey(key), uint64(value))
 	if err != nil {
 		if err == memcache.ErrCacheMiss {
-			if _, err = c.Add(key, value, 0); err != nil {
+			if _, err = c.Add(ctx, key, value, 0); err != nil {
 				return 0, err
 			}
 
@@ -278,11 +278,11 @@ func (c *MemcachedStore) Decrement(key string, value int64) (int64, error) {
 }
 
 // DecrementMany Decrement the value of multiple items in the cache,Non-atomic operation
-func (c *MemcachedStore) DecrementMany(values map[string]int64) (map[string]int64, error) {
+func (c *MemcachedStore) DecrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error) {
 	var ret = make(map[string]int64)
 
 	for key, value := range values {
-		if newValue, err := c.Decrement(key, value); err != nil {
+		if newValue, err := c.Decrement(ctx, key, value); err != nil {
 			return ret, err
 		} else {
 			ret[key] = newValue
@@ -293,7 +293,7 @@ func (c *MemcachedStore) DecrementMany(values map[string]int64) (map[string]int6
 }
 
 // Forget Remove an item from the cache.
-func (c *MemcachedStore) Forget(key string) error {
+func (c *MemcachedStore) Forget(ctx context.Context, key string) error {
 	if err := c.client.Delete(c.PrefixKey(key)); err != nil && err != memcache.ErrCacheMiss {
 		return err
 	}
@@ -302,11 +302,11 @@ func (c *MemcachedStore) Forget(key string) error {
 }
 
 // ForgetMany Remove multiple items from the cache,Non-atomic operation
-func (c *MemcachedStore) ForgetMany(keys ...string) (int64, error) {
+func (c *MemcachedStore) ForgetMany(ctx context.Context, keys ...string) (int64, error) {
 	var count int64 = 0
 
 	for _, key := range keys {
-		if err := c.Forget(key); err != nil {
+		if err := c.Forget(ctx, key); err != nil {
 			return count, err
 		} else {
 			count++
@@ -317,7 +317,7 @@ func (c *MemcachedStore) ForgetMany(keys ...string) (int64, error) {
 }
 
 // Expire Set expiration time for a key.
-func (c *MemcachedStore) Expire(key string, expire time.Duration) (bool, error) {
+func (c *MemcachedStore) Expire(ctx context.Context, key string, expire time.Duration) (bool, error) {
 	val, err := c.client.Get(c.PrefixKey(key))
 	if err != nil {
 		if err == memcache.ErrCacheMiss {
@@ -327,7 +327,7 @@ func (c *MemcachedStore) Expire(key string, expire time.Duration) (bool, error) 
 		return false, err
 	}
 
-	if err = c.Set(key, val, expire); err != nil {
+	if err = c.Set(ctx, key, val, expire); err != nil {
 		return false, err
 	}
 
@@ -335,7 +335,7 @@ func (c *MemcachedStore) Expire(key string, expire time.Duration) (bool, error) 
 }
 
 // ExpireMany Expire Set expiration time for multiple key.
-func (c *MemcachedStore) ExpireMany(values map[string]time.Duration) (map[string]bool, error) {
+func (c *MemcachedStore) ExpireMany(ctx context.Context, values map[string]time.Duration) (map[string]bool, error) {
 	var (
 		ok  bool
 		err error
@@ -343,7 +343,7 @@ func (c *MemcachedStore) ExpireMany(values map[string]time.Duration) (map[string
 	)
 
 	for key, expire := range values {
-		if ok, err = c.Expire(key, expire); err != nil {
+		if ok, err = c.Expire(ctx, key, expire); err != nil {
 			return nil, err
 		} else {
 			ret[key] = ok
@@ -354,12 +354,12 @@ func (c *MemcachedStore) ExpireMany(values map[string]time.Duration) (map[string
 }
 
 // Flush Remove all items from the cache.
-func (c *MemcachedStore) Flush() error {
+func (c *MemcachedStore) Flush(ctx context.Context) error {
 	return c.client.DeleteAll()
 }
 
 // Lock Get a lock instance.
-func (c *MemcachedStore) Lock(name string, time time.Duration) Lock {
+func (c *MemcachedStore) Lock(ctx context.Context, name string, time time.Duration) Lock {
 	return NewMemcachedLock(c.client, c.PrefixKey(name), time)
 }
 

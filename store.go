@@ -70,7 +70,7 @@ type Store interface {
 	// Flush Remove all items from the cache.
 	Flush(ctx context.Context) error
 	// Lock Get a lock instance.
-	Lock(name string, time time.Duration) Lock
+	Lock(ctx context.Context, name string, time time.Duration) Lock
 	// PrefixKey Add prefix to the front of key.
 	PrefixKey(key string) string
 	// GetClient Get a client instance.

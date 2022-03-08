@@ -9,7 +9,7 @@ package cache
 
 import (
 	"time"
-	
+
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
@@ -39,7 +39,7 @@ func (l *MemcachedLock) Acquire() (bool, error) {
 		if err == memcache.ErrNotStored {
 			return false, nil
 		}
-		
+
 		return false, err
 	} else {
 		return true, nil
@@ -47,10 +47,10 @@ func (l *MemcachedLock) Acquire() (bool, error) {
 }
 
 // Release Release the lock.
-func (l *MemcachedLock) Release() error {
+func (l *MemcachedLock) Release() (bool, error) {
 	if err := l.client.Delete(l.name); err != nil && err != memcache.ErrCacheMiss {
-		return err
+		return false, err
 	}
-	
-	return nil
+
+	return true, nil
 }

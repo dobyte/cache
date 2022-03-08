@@ -22,37 +22,37 @@ type Cache interface {
 	// GetMany Retrieve multiple items from the cache by key.
 	GetMany(ctx context.Context, keys ...string) (map[string]Result, error)
 	// GetSet Retrieve or set an item from the cache by key.
-	GetSet(key string, fn func() (interface{}, time.Duration, error)) Result
+	GetSet(ctx context.Context, key string, fn func() (interface{}, time.Duration, error)) Result
 	// Set Store an item in the cache.
-	Set(key string, value interface{}, expire time.Duration) error
+	Set(ctx context.Context, key string, value interface{}, expire time.Duration) error
 	// SetMany Store multiple items in the cache for a given number of expire.
-	SetMany(values map[string]interface{}, expire time.Duration) error
+	SetMany(ctx context.Context, values map[string]interface{}, expire time.Duration) error
 	// Forever Store an item in the cache indefinitely.
-	Forever(key string, value interface{}) error
+	Forever(ctx context.Context, key string, value interface{}) error
 	// ForeverMany Store multiple items in the cache indefinitely.
-	ForeverMany(values map[string]interface{}) error
+	ForeverMany(ctx context.Context, values map[string]interface{}) error
 	// Add Store an item in the cache if the key does not exist.
-	Add(key string, value interface{}, expire time.Duration) (bool, error)
+	Add(ctx context.Context, key string, value interface{}, expire time.Duration) (bool, error)
 	// Increment Increment the value of an item in the cache.
-	Increment(key string, value int64) (int64, error)
-	// IncrementMany Increment the value of multiple items in the cache.
-	IncrementMany(values map[string]int64) (map[string]int64, error)
+	Increment(ctx context.Context, key string, value int64) (int64, error)
+	// IncrementMany increment the value of multiple items in the cache.
+	IncrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error)
 	// Decrement Decrement the value of an item in the cache.
-	Decrement(key string, value int64) (int64, error)
+	Decrement(ctx context.Context, key string, value int64) (int64, error)
 	// DecrementMany Decrement the value of multiple items in the cache.
-	DecrementMany(values map[string]int64) (map[string]int64, error)
+	DecrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error)
 	// Forget Remove an item from the cache.
-	Forget(key string) error
+	Forget(ctx context.Context, key string) error
 	// ForgetMany Remove multiple items from the cache.
-	ForgetMany(keys ...string) (int64, error)
+	ForgetMany(ctx context.Context, keys ...string) (int64, error)
 	// Expire Set expiration time for a key.
-	Expire(key string, expire time.Duration) (bool, error)
+	Expire(ctx context.Context, key string, expire time.Duration) (bool, error)
 	// ExpireMany Set expiration time for multiple key.
-	ExpireMany(values map[string]time.Duration) (map[string]bool, error)
+	ExpireMany(ctx context.Context, values map[string]time.Duration) (map[string]bool, error)
 	// Flush Remove all items from the cache.
-	Flush() error
+	Flush(ctx context.Context) error
 	// Lock Get a lock instance.
-	Lock(name string, time time.Duration) Lock
+	Lock(ctx context.Context, name string, time time.Duration) Lock
 	// PrefixKey Add prefix to the front of key.
 	PrefixKey(key string) string
 	// GetClient Get a client instance.
@@ -178,83 +178,83 @@ func (c *cache) GetMany(ctx context.Context, keys ...string) (map[string]Result,
 }
 
 // GetSet Retrieve or set an item from the cache by key.
-func (c *cache) GetSet(key string, fn func() (interface{}, time.Duration, error)) Result {
-	return c.store.GetSet(key, fn)
+func (c *cache) GetSet(ctx context.Context, key string, fn func() (interface{}, time.Duration, error)) Result {
+	return c.store.GetSet(ctx, key, fn)
 }
 
 // Set Store an item in the cache.
-func (c *cache) Set(key string, value interface{}, expire time.Duration) error {
-	return c.store.Set(key, value, expire)
+func (c *cache) Set(ctx context.Context, key string, value interface{}, expire time.Duration) error {
+	return c.store.Set(ctx, key, value, expire)
 }
 
 // SetMany Store multiple items in the cache for a given number of expire.
-func (c *cache) SetMany(values map[string]interface{}, expire time.Duration) error {
-	return c.store.SetMany(values, expire)
+func (c *cache) SetMany(ctx context.Context, values map[string]interface{}, expire time.Duration) error {
+	return c.store.SetMany(ctx, values, expire)
 }
 
 // Forever Store an item in the cache indefinitely.
-func (c *cache) Forever(key string, value interface{}) error {
-	return c.store.Forever(key, value)
+func (c *cache) Forever(ctx context.Context, key string, value interface{}) error {
+	return c.store.Forever(ctx, key, value)
 }
 
 // ForeverMany Store multiple items in the cache indefinitely.
-func (c *cache) ForeverMany(values map[string]interface{}) error {
-	return c.store.ForeverMany(values)
+func (c *cache) ForeverMany(ctx context.Context, values map[string]interface{}) error {
+	return c.store.ForeverMany(ctx, values)
 }
 
 // Add Store an item in the cache if the key does not exist.
-func (c *cache) Add(key string, value interface{}, expire time.Duration) (bool, error) {
-	return c.store.Add(key, value, expire)
+func (c *cache) Add(ctx context.Context, key string, value interface{}, expire time.Duration) (bool, error) {
+	return c.store.Add(ctx, key, value, expire)
 }
 
 // Increment Increment the value of an item in the cache.
-func (c *cache) Increment(key string, value int64) (int64, error) {
-	return c.store.Increment(key, value)
+func (c *cache) Increment(ctx context.Context, key string, value int64) (int64, error) {
+	return c.store.Increment(ctx, key, value)
 }
 
 // IncrementMany Increment the value of multiple items in the cache.
-func (c *cache) IncrementMany(values map[string]int64) (map[string]int64, error) {
-	return c.store.IncrementMany(values)
+func (c *cache) IncrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error) {
+	return c.store.IncrementMany(ctx, values)
 }
 
 // Decrement Decrement the value of an item in the cache.
-func (c *cache) Decrement(key string, value int64) (int64, error) {
-	return c.store.Decrement(key, value)
+func (c *cache) Decrement(ctx context.Context, key string, value int64) (int64, error) {
+	return c.store.Decrement(ctx, key, value)
 }
 
 // DecrementMany Decrement the value of multiple items in the cache.
-func (c *cache) DecrementMany(values map[string]int64) (map[string]int64, error) {
-	return c.store.DecrementMany(values)
+func (c *cache) DecrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error) {
+	return c.store.DecrementMany(ctx, values)
 }
 
 // Forget Remove an item from the cache.
-func (c *cache) Forget(key string) error {
-	return c.store.Forget(key)
+func (c *cache) Forget(ctx context.Context, key string) error {
+	return c.store.Forget(ctx, key)
 }
 
 // ForgetMany Remove multiple items from the cache.
-func (c *cache) ForgetMany(keys ...string) (int64, error) {
-	return c.store.ForgetMany(keys...)
+func (c *cache) ForgetMany(ctx context.Context, keys ...string) (int64, error) {
+	return c.store.ForgetMany(ctx, keys...)
 }
 
 // Expire Set expiration time for a key.
-func (c *cache) Expire(key string, expire time.Duration) (bool, error) {
-	return c.store.Expire(key, expire)
+func (c *cache) Expire(ctx context.Context, key string, expire time.Duration) (bool, error) {
+	return c.store.Expire(ctx, key, expire)
 }
 
 // ExpireMany Set expiration time for multiple key.
-func (c *cache) ExpireMany(values map[string]time.Duration) (map[string]bool, error) {
-	return c.store.ExpireMany(values)
+func (c *cache) ExpireMany(ctx context.Context, values map[string]time.Duration) (map[string]bool, error) {
+	return c.store.ExpireMany(ctx, values)
 }
 
 // Flush Remove all items from the cache.
-func (c *cache) Flush() error {
-	return c.store.Flush()
+func (c *cache) Flush(ctx context.Context) error {
+	return c.store.Flush(ctx)
 }
 
 // Lock Get a lock instance.
-func (c *cache) Lock(name string, time time.Duration) Lock {
-	return c.store.Lock(name, time)
+func (c *cache) Lock(ctx context.Context, name string, time time.Duration) Lock {
+	return c.store.Lock(ctx, name, time)
 }
 
 // PrefixKey Add prefix to the front of key.

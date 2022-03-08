@@ -181,169 +181,155 @@ func (c *RedisStore) GetSet(ctx context.Context, key string, fn defaultValueFunc
 	}
 }
 
-// Set Store an item in the cache for a given number of expire.
+// Set store an item in the cache for a given number of expire.
 func (c *RedisStore) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	return c.client.Set(ctx, c.PrefixKey(key), conv.String(value), expiration).Err()
 }
 
-// SetMany Store multiple items in the cache for a given number of expire.
+// SetMany store multiple items in the cache for a given number of expire.
 func (c *RedisStore) SetMany(ctx context.Context, values map[string]interface{}, expiration time.Duration) error {
 	var (
-		lua          = `for i,k in ipairs(KEYS) do redis.call('setex',k,ARGV[1],ARGV[i+1]) end`
-		prefixedKeys = make([]string, 0, len(values))
-		args         = make([]interface{}, 1, len(values)+1)
+		lua  string
+		keys = make([]string, 0, len(values))
+		args = make([]interface{}, 1, len(values)+1)
 	)
+
+	if expiration > 0 {
+		lua = `for i,k in ipairs(KEYS) do redis.call('SETEX',k,ARGV[1],ARGV[i+1]) end`
+	} else {
+		lua = `for i,k in ipairs(KEYS) do redis.call('SET',k,ARGV[i+1]) end`
+	}
 
 	args[1] = expiration / time.Second
 
 	for key, value := range values {
-		prefixedKeys = append(prefixedKeys, c.PrefixKey(key))
+		keys = append(keys, c.PrefixKey(key))
 		args = append(args, conv.String(value))
 	}
-	c.client.MGet()
-	c.client.MSet()
 
-	c.client.PExpire()
-
-	return c.client.Eval(ctx, lua, prefixedKeys, args...).Err()
+	return c.client.Eval(ctx, lua, keys, args...).Err()
 }
 
-// Forever Store an item in the cache indefinitely.
+// Forever store an item in the cache indefinitely.
 func (c *RedisStore) Forever(ctx context.Context, key string, value interface{}) error {
-	return c.client.Set(ctx, c.PrefixKey(key), value, 0).Err()
+	return c.client.Set(ctx, c.PrefixKey(key), value, redis.KeepTTL).Err()
 }
 
-// ForeverMany Store multiple items in the cache indefinitely.
+// ForeverMany store multiple items in the cache indefinitely.
 func (c *RedisStore) ForeverMany(ctx context.Context, values map[string]interface{}) error {
-	var (
-		pipe = c.client.Pipeline()
-	)
-
-	for key, value := range values {
-		pipe.Set(ctx, c.PrefixKey(key), value, 0)
-	}
-
-	if _, err := pipe.Exec(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return c.SetMany(ctx, values, redis.KeepTTL)
 }
 
-// Add Store an item in the cache if the key does not exist.
+// Add store an item in the cache if the key does not exist.
 func (c *RedisStore) Add(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error) {
-	if expiration > 0 {
-
-	} else if expiration == redis.KeepTTL {
-
-	}
-
-	lua := "return redis.call('exists',KEYS[1])<1 and redis.call('setex',KEYS[1],ARGV[2],ARGV[1])"
-
-	return c.client.Eval(ctx, lua, []string{c.PrefixKey(key)}, value, expiration/time.Second).Bool()
+	return c.client.SetNX(ctx, key, conv.String(value), expiration).Result()
 }
 
-// Increment Increment the value of an item in the cache.
-func (c *RedisStore) Increment(key string, value int64) (int64, error) {
-	return c.client.IncrBy(context.Background(), c.PrefixKey(key), value).Result()
+// Increment increment the value of an item in the cache.
+func (c *RedisStore) Increment(ctx context.Context, key string, value int64) (int64, error) {
+	return c.client.IncrBy(ctx, c.PrefixKey(key), value).Result()
 }
 
-// IncrementMany Increment the value of multiple items in the cache.
-func (c *RedisStore) IncrementMany(values map[string]int64) (map[string]int64, error) {
+// IncrementMany increment the value of multiple items in the cache.
+func (c *RedisStore) IncrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error) {
 	var (
-		ctx  = context.Background()
-		pipe = c.client.Pipeline()
-		ret  = make(map[string]int64)
+		lua          = `local r = {} for i,k in ipairs(KEYS) do table.insert(r, redis.call('INCRBY',k,ARGV[i])) end return r`
+		count        = len(values)
+		keys         = make([]string, 0, count)
+		prefixedKeys = make([]string, 0, count)
+		args         = make([]interface{}, 0, count)
 	)
 
-	for key, value := range values {
-		ret[key] = pipe.IncrBy(ctx, c.PrefixKey(key), value).Val()
+	for key, val := range values {
+		prefixedKeys = append(prefixedKeys, c.PrefixKey(key))
+		keys = append(keys, key)
+		args = append(args, val)
 	}
 
-	if _, err := pipe.Exec(ctx); err != nil {
+	rst, err := c.client.Eval(ctx, lua, prefixedKeys, args...).Result()
+	if err != nil {
 		return nil, err
+	}
+
+	ret := make(map[string]int64, count)
+
+	for i, v := range rst.([]interface{}) {
+		ret[keys[i]] = v.(int64)
 	}
 
 	return ret, nil
 }
 
-// Decrement Decrement the value of an item in the cache.
-func (c *RedisStore) Decrement(key string, value int64) (int64, error) {
-	ret := c.client.DecrBy(context.Background(), c.PrefixKey(key), value)
-
-	return ret.Val(), ret.Err()
+// Decrement decrement the value of an item in the cache.
+func (c *RedisStore) Decrement(ctx context.Context, key string, value int64) (int64, error) {
+	return c.Increment(ctx, key, value)
 }
 
-// DecrementMany Decrement the value of multiple items in the cache.
-func (c *RedisStore) DecrementMany(values map[string]int64) (map[string]int64, error) {
+// DecrementMany decrement the value of multiple items in the cache.
+func (c *RedisStore) DecrementMany(ctx context.Context, values map[string]int64) (map[string]int64, error) {
+	return c.IncrementMany(ctx, values)
+}
+
+// Expire set expiration time for a key.
+func (c *RedisStore) Expire(ctx context.Context, key string, expiration time.Duration) (bool, error) {
+	return c.client.Expire(ctx, c.PrefixKey(key), expiration).Result()
+}
+
+// ExpireMany set expiration time for multiple key.
+func (c *RedisStore) ExpireMany(ctx context.Context, values map[string]time.Duration) (map[string]bool, error) {
 	var (
-		ctx  = context.Background()
-		pipe = c.client.Pipeline()
-		ret  = make(map[string]int64)
+		lua          = `local r = {} for i,k in ipairs(KEYS) do table.insert(r, redis.call('EXPIRE',k,ARGV[i])) end return r`
+		count        = len(values)
+		keys         = make([]string, 0, count)
+		prefixedKeys = make([]string, 0, count)
+		args         = make([]interface{}, 0, count)
 	)
 
-	for key, value := range values {
-		ret[key] = pipe.DecrBy(ctx, c.PrefixKey(key), value).Val()
+	for key, expiration := range values {
+		prefixedKeys = append(prefixedKeys, c.PrefixKey(key))
+		keys = append(keys, key)
+		args = append(args, expiration/time.Second)
 	}
 
-	if _, err := pipe.Exec(ctx); err != nil {
+	rst, err := c.client.Eval(ctx, lua, prefixedKeys, args...).Result()
+	if err != nil {
 		return nil, err
+	}
+
+	ret := make(map[string]bool, count)
+
+	for i, v := range rst.([]interface{}) {
+		ret[keys[i]] = v.(int64) == 1
 	}
 
 	return ret, nil
 }
 
-// Expire Set expiration time for a key.
-func (c *RedisStore) Expire(key string, expire time.Duration) (bool, error) {
-	return c.client.Expire(context.Background(), c.PrefixKey(key), expire).Result()
+// Forget remove an item from the cache.
+func (c *RedisStore) Forget(ctx context.Context, key string) error {
+	return c.client.Del(ctx, c.PrefixKey(key)).Err()
 }
 
-// ExpireMany Expire Set expiration time for multiple key.
-func (c *RedisStore) ExpireMany(values map[string]time.Duration) (map[string]bool, error) {
-	var (
-		ctx  = context.Background()
-		pipe = c.client.Pipeline()
-		ret  = make(map[string]bool)
-	)
-
-	for key, expire := range values {
-		ret[key] = pipe.Expire(ctx, c.PrefixKey(key), expire).Val()
-	}
-
-	if _, err := pipe.Exec(ctx); err != nil {
-		return nil, err
-	}
-
-	return ret, nil
-}
-
-// Forget Remove an item from the cache.
-func (c *RedisStore) Forget(key string) error {
-	return c.client.Del(context.Background(), c.PrefixKey(key)).Err()
-}
-
-// ForgetMany Remove multiple items from the cache.
-func (c *RedisStore) ForgetMany(keys ...string) (int64, error) {
+// ForgetMany remove multiple items from the cache.
+func (c *RedisStore) ForgetMany(ctx context.Context, keys ...string) (int64, error) {
 	for i, key := range keys {
 		keys[i] = c.PrefixKey(key)
 	}
 
-	ret := c.client.Del(context.Background(), keys...)
-
-	return ret.Val(), ret.Err()
+	return c.client.Del(ctx, keys...).Result()
 }
 
-// Flush Remove all items from the cache.
-func (c *RedisStore) Flush() error {
-	return c.client.FlushDB(context.Background()).Err()
+// Flush remove all items from the cache.
+func (c *RedisStore) Flush(ctx context.Context) error {
+	return c.client.FlushDB(ctx).Err()
 }
 
-// Lock Get a lock instance.
-func (c *RedisStore) Lock(name string, time time.Duration) Lock {
-	return NewRedisLock(c.client, c.PrefixKey(name), time)
+// Lock get a lock instance.
+func (c *RedisStore) Lock(ctx context.Context, name string, time time.Duration) Lock {
+	return NewRedisLock(c.client, ctx, c.PrefixKey(name), time)
 }
 
-// GetClient Get the redis client instance.
+// GetClient get the redis client instance.
 func (c *RedisStore) GetClient() interface{} {
 	return c.client
 }

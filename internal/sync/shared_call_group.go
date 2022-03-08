@@ -15,12 +15,12 @@ type (
 		val interface{}
 		err error
 	}
-	
+
 	sharedCallGroup struct {
 		calls  map[string]*sharedCall
 		locker sync.Mutex
 	}
-	
+
 	CallFunc func() (interface{}, error)
 )
 
@@ -35,21 +35,21 @@ func (s *sharedCallGroup) Call(key string, fn func() (interface{}, error)) (inte
 	if done {
 		return call.val, call.err
 	}
-	
+
 	s.makeCall(key, call, fn)
-	
+
 	return call.val, call.err
 }
 
 func (s *sharedCallGroup) createCall(key string) (*sharedCall, bool) {
 	s.locker.Lock()
-	
+
 	if call, ok := s.calls[key]; ok {
 		s.locker.Unlock()
 		call.wg.Wait()
 		return call, true
 	}
-	
+
 	call := new(sharedCall)
 	s.calls[key] = call
 	call.wg.Add(1)
@@ -64,6 +64,6 @@ func (s *sharedCallGroup) makeCall(key string, call *sharedCall, fn func() (inte
 		s.locker.Unlock()
 		call.wg.Done()
 	}()
-	
+
 	call.val, call.err = fn()
 }

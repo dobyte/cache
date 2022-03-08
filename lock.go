@@ -7,16 +7,23 @@
 
 package cache
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Lock interface {
-	// Acquire Attempt to acquire the lock.
+	// Acquire attempt to acquire the lock.
 	Acquire() (bool, error)
-	// Release Release the lock.
-	Release() error
+	// Release release the lock.
+	Release() (bool, error)
 }
 
 type BaseLock struct {
-	name string
-	time time.Duration
+	ctx   context.Context
+	code  string
+	name  string
+	time  time.Duration
+	done  chan struct{}
+	times int
 }
